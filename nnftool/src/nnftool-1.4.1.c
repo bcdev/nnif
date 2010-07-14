@@ -24,16 +24,18 @@
 
 
 #define NNFT_PROGRAM_NAME    "nnftool"
-#define NNFT_COPYRIGHT_INFO  "Copyright (c) 1998-2001 by Brockmann Consult"
+#define NNFT_COPYRIGHT_INFO  "Copyright (c) 1998-2003 by Brockmann Consult"
 
 /* V 1.2: Included Dr. Schiller's IMT network (nf)
- * #define NNFT_VERSION_INFO    "Version 1.2"
  */
-/* V 1.3: Added flag handling in writeFfbpFunc 
- * for the Dr. Schiller's IMT networks (nf)
+/* V 1.3: Added flag handling in writeFfbpFunc for the Dr. Schiller's IMT networks (nf)
  */
-#define NNFT_VERSION_INFO    "Version 1.4"  
-
+/* V 1.4: ??? - use diff to find out 
+ */
+/* V 1.4.1: openFile now logs the file being opened to stderr, added message to file-format-errors
+ * @todo testNnfNet detectes wrong I/O vector size if the test file contains a single line
+ */
+#define NNFT_VERSION_INFO    "Version 1.4.1"  
 
 #define NUM_LAYERS_MAX  16
 
@@ -122,7 +124,7 @@ void  printProgramInfo();
 char*  readLine(FILE* istream, int* piLine);
 int    parseInt(char** ppchLine, int iLine);
 double parseDouble(char** ppchLine, int iLine);
-void   throwInvalidFileFormatException(int iLine);
+void   throwInvalidFileFormatException(int iLine, const char* pchMessage);
 void   throwInvalidOptionArgumentException(const char* pchOption);
 void   throwMissingOptionArgumentException(const char* pchOption);
 
@@ -536,7 +538,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 	pchLine = readLine(istream, &iLine); /* "\n" */
 	pchLine = readLine(istream, &iLine); /* "the net has %d inputs:\n" */
 	if (sscanf(pchLine, "the net has %d inputs:\n", &nNumInp) != 1 || nNumInp <= 0)
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing or illegal net input specification");
 	pFfbpTrans->nNumInp = nNumInp;
 	pFfbpTrans->ppchInpName = (char**) malloc(nNumInp * sizeof (char*));
 	pFfbpTrans->pnInpFnId = (int*) malloc(nNumInp * sizeof (int));
@@ -544,7 +546,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
     {
 		pchLine = readLine(istream, &iLine);
 		if (sscanf(pchLine, "input %*d is %s in [%*lf,%*lf]\n", pchVarName) != 1 || isEmptyString(pchVarName))
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal net input parameter specification");
 		pFfbpTrans->ppchInpName[i] = (char*) malloc(strlen(pchVarName) + 1);
 		strcpy(pFfbpTrans->ppchInpName[i], pchVarName);
 		if (startsWithString(pchVarName, "exp("))
@@ -554,7 +556,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 		else if (strchr(pchVarName, '(') == NULL)
 			pFfbpTrans->pnInpFnId[i] = NN_FUNC_IDENTITY;
 		else
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal net input function specification");
 	}
 
 	/* Read variable names for input vector
@@ -562,7 +564,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 	pchLine = readLine(istream, &iLine); /* "\n" */
 	pchLine = readLine(istream, &iLine); /* "the net has %d outputs:\n" */
 	if (sscanf(pchLine, "the net has %d outputs:\n", &nNumOut) != 1 || nNumOut <= 0)
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing or illegal net output specification");
 	pFfbpTrans->nNumOut = nNumOut;
 	pFfbpTrans->ppchOutName = (char**) malloc(nNumOut * sizeof (char*));
 	pFfbpTrans->pnOutFnId = (int*) malloc(nNumOut * sizeof (int));
@@ -570,7 +572,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
     {
 		pchLine = readLine(istream, &iLine);
 		if (sscanf(pchLine, "output %*d is %s in [%*lf,%*lf]\n", pchVarName) != 1 || isEmptyString(pchVarName))
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal net output parameter specification");
 		pFfbpTrans->ppchOutName[i] = (char*) malloc(strlen(pchVarName) + 1);
 		strcpy(pFfbpTrans->ppchOutName[i], pchVarName);
 		if (startsWithString(pchVarName, "exp("))
@@ -580,20 +582,20 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 		else if (strchr(pchVarName, '(') == NULL)
 			pFfbpTrans->pnOutFnId[i] = NN_FUNC_IDENTITY;
 		else
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal net output function specification");
 	}
 
 	pchLine = readLine(istream, &iLine); /* "\n" */
 	pchLine = readLine(istream, &iLine); /* "ranges repeated for easier input\n" */
 	pchLine = readLine(istream, &iLine); /* "#\n" */
 	if (*pchLine != '#') 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing '#' character");
 
 	/* Read the size of the input vector
 	 */
 	pchLine = readLine(istream, &iLine);
 	if (sscanf(pchLine, "%d\n", &nNumInp) != 1 || nNumInp != pFfbpTrans->nNumInp)
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing or illegal number of input neurons");
 	pFfbpTrans->pdInpMin = (double*) malloc(nNumInp * sizeof (double));
 	pFfbpTrans->pdInpMax = (double*) malloc(nNumInp * sizeof (double));
 
@@ -610,7 +612,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 	 */
 	pchLine = readLine(istream, &iLine);
 	if (sscanf(pchLine, "%d\n", &nNumOut) != 1 || nNumOut != pFfbpTrans->nNumOut)
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing or illegal number of output neurons");
 	pFfbpTrans->pdOutMin = (double*) malloc(nNumOut * sizeof (double));
 	pFfbpTrans->pdOutMax = (double*) malloc(nNumOut * sizeof (double));
 
@@ -627,20 +629,20 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 	 */
 	pchLine = readLine(istream, &iLine); /* "$\n" */
 	if (*pchLine != '$') 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing '$' character");
 
 	/* Read number of layers
 	 */
 	pchLine = readLine(istream, &iLine); /* "#planes=%d %d %d %d...\n" */
 	if (*pchLine != '#') 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing '#' character");
 	pchLine = strchr(pchLine, '=');
 	if (pchLine == NULL) 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "missing '=' character in planes specification");
 	pchLine++;
 	pNet->na.nNumLayers = (short)parseInt(&pchLine, iLine);
 	if (pNet->na.nNumLayers <= 1)
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "illegal number of layers, should be > 1");
 	Nn_CreateLayers(pNet);
 
 	/* Read number of units for each layer
@@ -651,7 +653,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 		
 		pLayer->la.nNumUnits = (short)parseInt(&pchLine, iLine);
 		if (pLayer->la.nNumUnits <= 0)
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "illegal number of units, should be > 0");
 		
 		/* Overwrite function type defaults
 		 * FFBP nets do not have the sigmoid-activation in the input layer!
@@ -661,7 +663,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 		if (iL == 0) 
         {
             if (pLayer->la.nNumUnits > IO_VECTOR_SIZE_MAX)
-    			throwInvalidFileFormatException(iLine);
+    			throwInvalidFileFormatException(iLine, "maximum number of units exceeded");
 
 			pLayer->la.nActFnId = NN_FUNC_IDENTITY;
 			pLayer->la.nOutFnId = NN_FUNC_LINEAR;
@@ -669,7 +671,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 		else if (iL == pNet->na.nNumLayers - 1) 
         {
             if (pLayer->la.nNumUnits > IO_VECTOR_SIZE_MAX)
-    			throwInvalidFileFormatException(iLine);
+    			throwInvalidFileFormatException(iLine, "maximum number of units exceeded");
 
 			pLayer->la.nOutFnId = NN_FUNC_LINEAR;
 		}
@@ -724,10 +726,10 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
     {
 		pchLine = readLine(istream, &iLine); /* "bias %d %d\n" */
 		if (sscanf(pchLine, "bias %d %d\n", &nLayerIndex, &nNumUnits) != 2) 
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal 'bias' specification");
 		pLayer = Nn_GetLayerAt(pNet, nLayerIndex);
 		if (pLayer->la.nNumUnits != nNumUnits)
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "illegal 'bias' specification: unexpected number of units");
 		for (iU = 0; iU < nNumUnits; iU++) 
         {
 			pchLine = readLine(istream, &iLine); /* "%lf\n" */
@@ -742,17 +744,17 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
     {
 		pchLine = readLine(istream, &iLine); /* "wgt %d %d %d\n" */
 		if (sscanf(pchLine, "wgt %d %d %d\n", &nLayerIndex, &nNumUnits1, &nNumUnits2) != 3) 
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "missing or illegal 'wgt' specification");
 		if (nLayerIndex >= pNet->na.nNumLayers-1)
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "illegal 'wgt' specification: layer index out of bounds");
 		pLayer = Nn_GetLayerAt(pNet, nLayerIndex+1);
 		if (pLayer->la.nNumUnits != nNumUnits2)
-			throwInvalidFileFormatException(iLine);
+			throwInvalidFileFormatException(iLine, "illegal 'wgt' specification: unexpected number of units");
 		for (iU = 0; iU < nNumUnits2; iU++) 
         {
 			pUnit = Nn_GetUnitAt(pLayer, (short)iU);
 			if (pUnit->ua.nNumConns != nNumUnits1)
-				throwInvalidFileFormatException(iLine);
+				throwInvalidFileFormatException(iLine, "illegal 'wgt' specification: unexpected number of connections");
 			for (iC = 0; iC < nNumUnits1; iC++) 
             {
 				pchLine = readLine(istream, &iLine); /* "%lf\n" */
@@ -1587,6 +1589,15 @@ FILE* openFile(const char* pchFile, const char* pchMode)
 		exit(-1);
 	}
 
+    if (*pchMode == 'r') 
+    {
+        fprintf(stderr, "Reading from file '%s'...\n", pchFile);
+    }
+    else 
+    {
+        fprintf(stderr, "Writing to file '%s'...\n", pchFile);
+    }
+
 	stream = fopen(pchFile, pchMode);
 	if (stream == NULL) 
     {
@@ -1657,7 +1668,7 @@ char* readLine(FILE* istream, int* piLine)
 {
 	static char pchLine[LINE_LEN_MAX+1];
 	if (fgets(pchLine, LINE_LEN_MAX, istream) == NULL)
-		throwInvalidFileFormatException(*piLine);
+		throwInvalidFileFormatException(*piLine, "unexpected end-of-file");
 	(*piLine)++;
 	return pchLine;
 }
@@ -1669,7 +1680,7 @@ int parseInt(char** ppchLine, int iLine)
 	char* pchL2 = NULL;
 	int n = (int) strtol(pchL1, &pchL2, 10);
 	if (pchL2 == NULL || pchL2 <= pchL1) 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "'int'  number expected");
 	*ppchLine = pchL2;
 	return n;
 }
@@ -1681,7 +1692,7 @@ double parseDouble(char** ppchLine, int iLine)
 	char* pchL2 = NULL;
 	double d = strtod(pchL1, &pchL2);
 	if (pchL2 == NULL || pchL2 <= pchL1) 
-		throwInvalidFileFormatException(iLine);
+		throwInvalidFileFormatException(iLine, "'double' number expected");
 	*ppchLine = pchL2;
 	return d;
 }
@@ -1732,9 +1743,9 @@ BOOL isEmptyString(const char* pch)
 }
 
 
-void throwInvalidFileFormatException(int iLine)
+void throwInvalidFileFormatException(int iLine, const char* pchMessage)
 {
-	printf("Line %d: Invalid file format\n", iLine);
+	printf("File format error: line %d: %s\n", iLine, pchMessage);
 	exit(-1);
 }
 
@@ -1793,8 +1804,8 @@ void printUsage()
 		"  -n       Includes input/output normalizing into the NNF file\n"
 		"  -is      Multiplies input vector elements i1 to i2 by scale\n"
 		"  -os      Multiplies output vector elements i1 to i2 by scale\n"
-		"  file1    Name of the first FFBP input file (ASCII)\n"
-		"  file2    Name of the second FFBP input file (ASCII)\n"
+		"  file1    Name of the inverse FFBP input file (ASCII)\n"
+		"  file2    Name of the forward FFBP input file (ASCII)\n"
 		"  thres    Threshold for flag creation\n"
 		"  func     Name of the C-function to be generated\n"
 		"or\n"
