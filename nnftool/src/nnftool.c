@@ -1,10 +1,10 @@
 /*
  * File:        NnMain.c
  * Purpose:     Implementation of the neural net file conversion tool
- * Author:      Norman Fomferra (SCICON)
- *              Tel:   +49 4152 1457 (tel)
- *              Fax:   +49 4152 1455 (fax)
- *              Email: Norman.Fomferra@gkss.de
+ * Author:      Norman Fomferra (Brockmann Consult GmbH)
+ *              Tel:   +49 4152 889 303 (tel)
+ *              Fax:   +49 4152 889 333 (fax)
+ *              Email: norman.fomferra@brockmann-consult.de
  */
 
 #include <stdio.h>
@@ -24,18 +24,24 @@
 
 
 #define NNFT_PROGRAM_NAME    "nnftool"
-#define NNFT_COPYRIGHT_INFO  "Copyright (c) 1998-2003 by Brockmann Consult"
+#define NNFT_COPYRIGHT_INFO  "Copyright (c) 1998-2010 by Brockmann Consult GmbH"
 
-/* V 1.2: Included Dr. Schiller's IMT network (nf)
- */
-/* V 1.3: Added flag handling in writeFfbpFunc for the Dr. Schiller's IMT networks (nf)
- */
-/* V 1.4: ??? - use diff to find out 
- */
-/* V 1.4.1: openFile now logs the file being opened to stderr, added message to file-format-errors
+/*
  * @todo testNnfNet detectes wrong I/O vector size if the test file contains a single line
  */
-#define NNFT_VERSION_INFO    "Version 1.4.1"  
+
+
+/* V 1.2: Included Dr. Schiller's IMT network (nf)
+ *
+ * V 1.3: Added flag handling in writeFfbpFunc for the Dr. Schiller's IMT networks (nf)
+ *
+ * V 1.4: ??? - use diff to find out 
+ *
+ * V 1.4.1: openFile now logs the file being opened to stderr, added message to file-format-errors
+ *
+ * V 1.5: Added new option -ib to also privide per unit scaling offsets.  
+ */
+#define NNFT_VERSION_INFO    "Version 1.5"  
 
 #define NUM_LAYERS_MAX  16
 
@@ -96,7 +102,9 @@ static BOOL     g_bInternalNormalising         = FALSE;
 static BOOL     g_bInputScaling                = FALSE;
 static BOOL     g_bOutputScaling               = FALSE;
 static double   g_dThreshold                   = 0.0;
+static double   g_dIBiases[IO_VECTOR_SIZE_MAX];
 static double   g_dIScales[IO_VECTOR_SIZE_MAX];
+static double   g_dOBiases[IO_VECTOR_SIZE_MAX];
 static double   g_dOScales[IO_VECTOR_SIZE_MAX];
 
 NN_PNET  readNnfNet     (const char* pchFile, BOOL bForceMemoryCreat);
@@ -146,7 +154,9 @@ int main (int argc, char *argv[])
         int i;
         for (i = 0; i < IO_VECTOR_SIZE_MAX; i++)
         {
+            g_dIBiases[i] = 0.0;
             g_dIScales[i] = 1.0;
+            g_dOBiases[i] = 0.0;
             g_dOScales[i] = 1.0;
         }
     }
@@ -198,7 +208,8 @@ int main (int argc, char *argv[])
 				g_bInternalNormalising = TRUE;
 			}
 			else if ((pchOption[0] == 'i' || pchOption[0] == 'o') 
-                     && pchOption[1] == 's' && isdigit(pchOption[2])) 
+                     && (pchOption[1] == 's' || pchOption[1] == 'b') 
+					 && isdigit(pchOption[2])) 
             {
 				char* pch;
                 int i1, i2 = 0;
@@ -218,21 +229,30 @@ int main (int argc, char *argv[])
                 }
 				if (iArg < argc-1 && !isOptionString(argv[iArg+1])) {
                     int i;
-                    double scale;
+                    double value;
 					iArg++;
 					if (isEmptyString(argv[iArg]))
 						throwInvalidOptionArgumentException(pchOption);
-                    scale = strtod(argv[iArg], &pch);
+                    value = strtod(argv[iArg], &pch);
                     if (*pch != '\0') 
                         throwInvalidOptionArgumentException(pchOption);
                     if (*pch != '\0') 
                         throwInvalidOptionArgumentException(pchOption);
                     for (i = i1; i <= i2; i++)
                     {
-                        if (pchOption[0] == 'i')
-                            g_dIScales[i] = scale;
-                        else
-                            g_dOScales[i] = scale;
+						if (pchOption[0] == 'i') {
+							if (pchOption[1] == 's') {
+								g_dIScales[i] = value;
+							} else {
+								g_dIBiases[i] = value;
+							}
+						} else {
+							if (pchOption[1] == 's') {
+								g_dOScales[i] = value;
+							} else {
+								g_dOBiases[i] = value;
+							}
+						}
                     }
 				}
 				else
@@ -684,25 +704,43 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 
 			if (iL == 0) 
             {
+				double a = 1.0;
+				double b = 0.0;
+				double c = 1.0;
+				double d = 0.0;
+				if (bInputScaling) 
+				{
+				    a = g_dIScales[iU];
+				    b = g_dIOffsets[iU];
+				}
                 if (bInternalNormalising) 
                 {
 					double dx = pFfbpTrans->pdInpMax[iU] - pFfbpTrans->pdInpMin[iU];
-					pUnit->ua.fOutBias  = -pFfbpTrans->pdInpMin[iU] / dx;
-					pUnit->ua.fOutScale = 1.0 / dx;
+					c = 1.0 / dx;
+					d = -pFfbpTrans->pdInpMin[iU] / dx;
 				}
-                if (bInputScaling)
-				    pUnit->ua.fOutScale *= g_dIScales[iU];
+				pUnit->ua.fOutScale = c * a;
+				pUnit->ua.fOutBias  = c * b + d;
             }
 			else if (iL == pNet->na.nNumLayers - 1) 
             {
-                if (bInternalNormalising) 
-                {				
-					double dx = pFfbpTrans->pdOutMax[iU] - pFfbpTrans->pdOutMin[iU];
-					pUnit->ua.fOutBias  = pFfbpTrans->pdOutMin[iU];
-					pUnit->ua.fOutScale = dx;
+				double a = 1.0;
+				double b = 0.0;
+				double c = 1.0;
+				double d = 0.0;
+				if (bInputScaling) 
+				{
+				    a = g_dOScales[iU];
+				    b = g_dOBiases[iU];
 				}
-                if (bOutputScaling)
-    				pUnit->ua.fOutScale *= g_dOScales[iU];
+                if (bInternalNormalising) 
+                {
+					double dx = pFfbpTrans->pdOutMax[iU] - pFfbpTrans->pdOutMin[iU];
+					c = 1.0 / dx;
+					d = -pFfbpTrans->pdOutMin[iU] / dx;
+				}
+				pUnit->ua.fOutScale = 1.0 / (c * a);
+				pUnit->ua.fOutBias  = -(c * b + d) / (c * a);
             }
 
 			if (iL > 0) 
@@ -1787,23 +1825,23 @@ void printUsage()
 		"  -m       Forces in-memory creation of NNF net (for internal tests)\n"
 		"  file     Name of a NNF input file (ASCII or binary)\n"
 		"or\n"
-		"%s -ffbp [-o file] [-b] [-i] [-<i|o>s<i1>[-<i2>] scale] file [func]\n"
+		"%s -ffbp [-o file] [-b] [-i] [-<i|o><o|s><i1>[-<i2>] value] file [func]\n"
 		"  -ffbp    Switches to FFBP conversion mode\n"
 		"  -o file  Specifies a name for the NNF output file\n"
 		"  -b       Forces creation of a binary NNF output file\n"
 		"  -n       Includes input/output normalizing into the NNF file\n"
-		"  -is      Multiplies input vector elements i1 to i2 by scale\n"
-		"  -os      Multiplies output vector elements i1 to i2 by scale\n"
+		"  -i<o|s>  Offset (o) or factor (s) for linear scaling of input units i1 to i2\n"
+		"  -o<o|s>  Offset (o) or factor (s) for linear scaling of output units i1 to i2\n"
 		"  file     Name of FFBP input file (ASCII)\n"
 		"  func     Name of the C-function to be generated\n"
 		"or\n"
-		"%s -ffbpx [-o file] [-b] [-i] [-<i|o>s<i1>[-<i2>] scale] file1 file2 thres [func]\n"
+		"%s -ffbpx [-o file] [-b] [-i] [-<i|o><o|s><i1>[-<i2>] value] file1 file2 thres [func]\n"
 		"  -ffbp    Switches to FFBP conversion mode\n"
 		"  -o file  Specifies a name for the NNF output file\n"
 		"  -b       Forces creation of a binary NNF output file\n"
 		"  -n       Includes input/output normalizing into the NNF file\n"
-		"  -is      Multiplies input vector elements i1 to i2 by scale\n"
-		"  -os      Multiplies output vector elements i1 to i2 by scale\n"
+		"  -i<o|s>  Offset (o) or factor (s) for linear scaling of input units i1 to i2\n"
+		"  -o<o|s>  Offset (o) or factor (s) for linear scaling of output units i1 to i2\n"
 		"  file1    Name of the inverse FFBP input file (ASCII)\n"
 		"  file2    Name of the forward FFBP input file (ASCII)\n"
 		"  thres    Threshold for flag creation\n"
