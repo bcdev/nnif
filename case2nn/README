@@ -1,0 +1,69 @@
+	
+===================================================================
+ README for the NN file for 'MERIS Case 2 water processing by IMT'
+===================================================================
+
+This archive contains data and C-sources for Case 2 waters processing using 
+the inverse modelling technique according to the DPM issue 4 revision 4.
+
+To run the Case 2 test, its compiled sources have to be linked with
+the NN interface object files.
+
+The neural network for the processing expects the following input vector:
+     1: Sun zenith angle
+     2: Satellite viewing zenith angle
+     3: Azimuth difference angle
+     4: Normalised Surface Reflectance at 412 nm
+     5: Normalised Surface Reflectance at 442 nm
+     6: Normalised Surface Reflectance at 490 nm
+     7: Normalised Surface Reflectance at 510 nm
+     8: Normalised Surface Reflectance at 560 nm
+     9: Normalised Surface Reflectance at 620 nm
+    10: Normalised Surface Reflectance at 665 nm
+    11: Normalised Surface Reflectance at 708 nm
+
+... and produces the following output vector:
+     1: TSM  - Total Suspended Matter
+     2: Chl2 - Algal pigment index 2
+     3: ODOC - Yellow substance absorption
+     4: OROUT2_F - Output range checking
+
+
+===================================================================
+ File Listing
+===================================================================
+
+case2nn/
+	bin/
+		case2              - case2 test program compiled for SunOS 
+		                     and linked with the NNIF library     
+		                     Usage: case2 <nnf-file> <inp-vec-file> \
+		                                             <outp-vec-file>
+	data/                      - Test data files
+		case2.nnf          - NN file for CASE II processing 
+		case2_gkss.inp     - Plain ASCII file containing 500 test input 
+		                     vectors originally computed at GKSS
+		case2_gkss.out     - Plain ASCII file containing 500 output 
+		                     vectors originally computed at GKSS
+		case2_nnf.out      - Plain ASCII file containing 500 output
+		                     vectors computed with the case2 test 
+		                     program:
+		                     > cd case2nn/data
+		                     > ../bin/case2 case2.nnf case2_gkss.inp \
+		                                                case2_nnf.out
+	src/
+		case2.c            - main() function for the case2 test
+		processCase2Net.h  - Case 2 processing function: header
+		processCase2Net.c  - Case 2 processing function: implementation
+
+	docs/
+		NN_4_prod1.ps      - Technical note describing the IMT 
+		                     (prepared by Dr.Schiller)
+
+
+                                                                  
+===================================================================
+Norman Fomferra (Brockmann Consult)                
+fomferra@brockmann-consult.de
+
+Geesthacht, 19. May 2001
