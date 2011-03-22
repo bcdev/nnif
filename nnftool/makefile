@@ -2,8 +2,8 @@
 SRCDIR = ./src
 OUTDIR = ./build/$(CFGDIR)
 
-NNLIBDIR = ../nnif-1.2/lib
-NNINCLDIR = ../nnif-1.2/src
+NNLIBDIR = ../nnif/lib
+NNINCLDIR = ../nnif/src
 
 TARGET = $(OUTDIR)/nnftool
 
