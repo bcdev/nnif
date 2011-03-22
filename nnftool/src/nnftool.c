@@ -711,7 +711,7 @@ NN_PNET readFfbpNet(const char* pchFfbpFile, FFBP_TRANS* pFfbpTrans, BOOL bInter
 				if (bInputScaling) 
 				{
 				    a = g_dIScales[iU];
-				    b = g_dIOffsets[iU];
+				    b = g_dIBiases[iU];
 				}
                 if (bInternalNormalising) 
                 {
