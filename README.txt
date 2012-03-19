@@ -1,3 +1,11 @@
+________________________________________________________________
+
+ System requirements
+________________________________________________________________
+
+
+For reading and writing NNs in binary format a 32-bit big-endian
+architecture is required.
 
 ________________________________________________________________
 
@@ -74,4 +82,3 @@ ________________________________________________________________
 7) go to nnftool/.
 8) type "make release"
 9) in the case of success, type "cp ./build/release/nnftool ./bin"
-
