@@ -1,0 +1,4 @@
+Since 1.3: 
+
+Now taking care that binary NNs files are always written in big endian order 
+and read back correctly, regardless of the executing OS. (nf, 2012-05-04)
