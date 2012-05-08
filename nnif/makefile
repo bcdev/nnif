@@ -4,7 +4,7 @@ OUTDIR = ./build/$(CFGDIR)
 
 TARGET = ./lib/libnnif.a
 
-COMPILE = cc -I$(SRCDIR) $(CFGOPT) -c
+COMPILE = gcc -mlong32 -I$(SRCDIR) $(CFGOPT) -c
 LINK    = ar
 
 
@@ -14,7 +14,9 @@ PRJ_SRCS = \
   $(SRCDIR)/NnProc.c \
   $(SRCDIR)/NnMemIO.c \
   $(SRCDIR)/NnBinIO.c \
-  $(SRCDIR)/NnAscIO.c
+  $(SRCDIR)/NnAscIO.c \
+  $(SRCDIR)/utils/endian_order.c
+
 
 
 PRJ_OBJS = \

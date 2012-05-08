@@ -15,7 +15,7 @@ extern "C" {
 
 /* Define the current version of NNFF descibed in this header file */
 #define NN_VERSION_MAJOR    1
-#define NN_VERSION_MINOR    2
+#define NN_VERSION_MINOR    3
 
 /* Define the overall floating point type for NNFF */
 /* DO NOT CHANGE WITHOUT CHANGING THE NNFF VERSION NO. */

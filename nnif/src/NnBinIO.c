@@ -10,11 +10,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include "NnBase.h"
 #include "NnCheck.h"
 #include "NnBinIO.h"
+#include "utils/endian_order.h"
 
 /*////////////////////////////////////////////////////////////////////////////*/
 /* Module local binary I/O stream                                             */
@@ -36,6 +38,11 @@ NN_STATUS Nn_WriteBinLayer  (const NN_PLAYER pLayer);
 NN_STATUS Nn_WriteBinUnit   (const NN_PUNIT  pUnit);
 NN_STATUS Nn_WriteBinConns  (const NN_PUNIT  pUnit);
 NN_STATUS Nn_WriteBinMatrix (const NN_PUNIT  pUnit);
+
+void eo_swap_net_attrib(NN_NET_ATTRIB* pna);
+void eo_swap_layer_attrib(NN_LAYER_ATTRIB* pla); 
+void eo_swap_unit_attrib(NN_UNIT_ATTRIB* pua);
+void eo_swap_conn_attrib(NN_CONN_ATTRIB* pca); 
 
 /*////////////////////////////////////////////////////////////////////////////*/
 /* Function: Nn_CreateNetFromBinFile                                          */
@@ -114,11 +121,17 @@ NN_STATUS Nn_ReadBinHeader
 
 	/* Read the section identifier (4 bytes) */
 	fread(pnSectionID,   sizeof (long), 1, g_stream);
+	if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_long_n(pnSectionID, 1);
+
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 	
 	/* Read the section size (4 bytes) */
 	fread(pnSectionSize, sizeof (long), 1, g_stream);
+	if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_long_n(pnSectionSize, 1);
+
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 
@@ -155,8 +168,11 @@ NN_STATUS Nn_ReadBinNet (NN_PNET pNet)
 	if (nSectionSize != NN_NET_SECTION_SIZE)
 		return Nn_SetInvalidSectionSizeError();
 
-	/* Read the complete neural nat section */
+	/* Read the complete neural net section */
 	fread(&pNet->na, NN_NET_SECTION_SIZE, 1, g_stream);
+	if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_net_attrib(&pNet->na);
+
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 
@@ -225,6 +241,9 @@ NN_STATUS Nn_ReadBinLayer (NN_PLAYER pLayer)
 
 	/* Read the complete layer section from the file */
 	fread(&pLayer->la, NN_LAYER_SECTION_SIZE, 1, g_stream);
+	if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_layer_attrib(&pLayer->la);
+
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 
@@ -266,6 +285,9 @@ NN_STATUS Nn_ReadBinUnit (NN_PUNIT  pUnit)
 
 	/* Read the complete unit section from the NNFF file */
 	fread(&pUnit->ua, NN_UNIT_SECTION_SIZE, 1, g_stream);
+        if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_unit_attrib(&pUnit->ua);
+
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 
@@ -334,6 +356,8 @@ NN_STATUS Nn_ReadBinConns (NN_PUNIT  pUnit)
 			  NN_CONN_ENTRY_SIZE, 
 			  1, 
 			  g_stream);
+		if (eo_endian_order() != BIG_ENDIAN) 
+			eo_swap_conn_attrib(&pConn->ca);
 		if (ferror(g_stream))
 			return Nn_SetFileReadError();
 	}
@@ -387,6 +411,9 @@ NN_STATUS Nn_ReadBinMatrix (NN_PUNIT pUnit)
 			  NN_MATRIX_ENTRY_SIZE * pUnit->ua.nNumConns,
 			  1,
 			  g_stream);
+		if (eo_endian_order() != BIG_ENDIAN) 
+			eo_swap_double_n(pfRow, pUnit->ua.nNumConns);
+
 		if (ferror(g_stream))
 			return Nn_SetFileReadError();
 	}
@@ -434,14 +461,18 @@ NN_STATUS Nn_WriteNetToBinFile (const char* pchFilePath, const NN_PNET pNet)
 
 NN_STATUS Nn_WriteBinHeader (long nSectionID, long nSectionSize)
 {
-	assert(g_stream != NULL);
+        assert(g_stream != NULL);
 
 	/* Write the section identifier (4 bytes) */
-	fwrite(&nSectionID,   sizeof (long), 1, g_stream);
+        if (eo_endian_order() != BIG_ENDIAN)
+		eo_swap_long_n(&nSectionID, 1); 
+	fwrite(&nSectionID, sizeof (long), 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 
 	/* Write the section size (4 bytes) */
+        if (eo_endian_order() != BIG_ENDIAN)
+		eo_swap_long_n(&nSectionSize, 1); 
 	fwrite(&nSectionSize, sizeof (long), 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
@@ -461,6 +492,7 @@ NN_STATUS Nn_WriteBinNet (const NN_PNET pNet)
 	short      iL, iU;
 	NN_PLAYER  pLayer;
 	NN_PUNIT   pUnit;
+        NN_NET_ATTRIB na;
 	
 	assert(pNet != NULL);
 	assert(g_stream != NULL);
@@ -471,7 +503,10 @@ NN_STATUS Nn_WriteBinNet (const NN_PNET pNet)
 		return nns;
 	
 	/* Write the complete net section */
-	fwrite(&pNet->na, NN_NET_SECTION_SIZE, 1, g_stream);
+        na = pNet->na;
+        if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_net_attrib(&na);
+	fwrite(&na, NN_NET_SECTION_SIZE, 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 	
@@ -516,6 +551,7 @@ NN_STATUS Nn_WriteBinNet (const NN_PNET pNet)
 
 NN_STATUS Nn_WriteBinLayer (const NN_PLAYER pLayer)
 {
+	NN_LAYER_ATTRIB la;
 	NN_STATUS nns;
 
 	assert(pLayer != NULL);
@@ -527,12 +563,16 @@ NN_STATUS Nn_WriteBinLayer (const NN_PLAYER pLayer)
 		return nns;
 	
 	/* Write the layer section to the NNFF file */
-	fwrite(&pLayer->la, NN_LAYER_SECTION_SIZE, 1, g_stream);
+        la = pLayer->la;
+        if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_layer_attrib(&la);
+	fwrite(&la, NN_LAYER_SECTION_SIZE, 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 
 	return NN_OK;
 }
+
 
 /*////////////////////////////////////////////////////////////////////////////*/
 /* Function: Nn_WriteBinUnit                                                  */
@@ -542,6 +582,7 @@ NN_STATUS Nn_WriteBinLayer (const NN_PLAYER pLayer)
 
 NN_STATUS Nn_WriteBinUnit  (const NN_PUNIT pUnit)
 {
+        NN_UNIT_ATTRIB ua;
 	NN_STATUS nns;
 
 	assert(pUnit != NULL);
@@ -553,7 +594,10 @@ NN_STATUS Nn_WriteBinUnit  (const NN_PUNIT pUnit)
 		return nns;
 
 	/* Write the unit section to the NNFF file */
-	fwrite(&pUnit->ua, NN_UNIT_SECTION_SIZE, 1, g_stream);
+	ua = pUnit->ua;
+	if (eo_endian_order() != BIG_ENDIAN) 
+		eo_swap_unit_attrib(&ua);
+	fwrite(&ua, NN_UNIT_SECTION_SIZE, 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 
@@ -586,6 +630,7 @@ NN_STATUS Nn_WriteBinUnit  (const NN_PUNIT pUnit)
 
 NN_STATUS Nn_WriteBinConns (const NN_PUNIT pUnit)
 {
+	NN_CONN_ATTRIB ca;
 	NN_STATUS nns;
 	NN_PCONN  pConn;
 	short     iC;
@@ -606,7 +651,10 @@ NN_STATUS Nn_WriteBinConns (const NN_PUNIT pUnit)
 		pConn = Nn_GetConnAt(pUnit, iC);
 
 		/* Write the connection to the NNFF file */
-		fwrite(&pConn->ca, 
+                ca = pConn->ca;
+		if (eo_endian_order() != BIG_ENDIAN) 
+			eo_swap_conn_attrib(&ca);
+		fwrite(&ca, 
 			   NN_CONN_ENTRY_SIZE, 
 			   1, 
 			   g_stream);
@@ -628,6 +676,10 @@ NN_STATUS Nn_WriteBinMatrix  (const NN_PUNIT pUnit)
 	NN_STATUS nns;
 	NN_FLOAT* pfRow;
 	short     iC;
+	NN_FLOAT* pfBuf;
+	size_t    nBuf;       
+	
+        
 
 	assert(pUnit != NULL);
 	assert(g_stream != NULL);
@@ -637,6 +689,9 @@ NN_STATUS Nn_WriteBinMatrix  (const NN_PUNIT pUnit)
 	if (nns != NN_OK)
 		return nns;
 
+	nBuf  = pUnit->ua.nNumConns * NN_MATRIX_ENTRY_SIZE;
+	pfBuf = malloc(nBuf);
+
 	/* Write the matrix row by row directly after the connections */
 	/* For all matrix rows (the size of the matrix is pUnit->ua.nNumConns ^ 2) */
 	for (iC = 0; iC < pUnit->ua.nNumConns; iC++)
@@ -644,16 +699,67 @@ NN_STATUS Nn_WriteBinMatrix  (const NN_PUNIT pUnit)
 		/* Get the matrix row at the given position */
 		pfRow = Nn_GetMatrixRowAt(pUnit, iC);
 
+
 		/* Write the row to the NNFF file */
-		fwrite(pfRow, 
+		memcpy(pfBuf, pfRow, nBuf);
+		if (eo_endian_order() != BIG_ENDIAN) 
+			eo_swap_double_n(pfBuf, pUnit->ua.nNumConns);
+		fwrite(pfBuf, 
 			   NN_MATRIX_ENTRY_SIZE * pUnit->ua.nNumConns,
 			   1,
 			   g_stream);
 		if (ferror(g_stream))
+		{
+			free(pfBuf);
 			return Nn_SetFileReadError();
+		}
 	}
 
+	free(pfBuf);
 	return NN_OK;
 }
 
 /*////////////////////////////////////////////////////////////////////////////*/
+
+void eo_swap_net_attrib(NN_NET_ATTRIB* pna)
+{
+	eo_swap_short_n(pna->anVersion, 2);
+	eo_swap_short_n(&(pna->nNumLayers), 1);
+	eo_swap_short_n(&(pna->iInpLayer), 1);
+	eo_swap_short_n(&(pna->iOutLayer), 1);
+	eo_swap_short_n(&(pna->nPrecision), 1);
+}
+
+void eo_swap_layer_attrib(NN_LAYER_ATTRIB* pla) 
+{
+	eo_swap_short_n(&(pla->iLayer), 1);
+	eo_swap_short_n(&(pla->nNumUnits), 1);
+	eo_swap_short_n(&(pla->nInpFnId), 1);
+	eo_swap_short_n(&(pla->nActFnId), 1);
+	eo_swap_short_n(&(pla->nOutFnId), 1);
+	eo_swap_double_n(&(pla->fActSlope), 1);
+	eo_swap_double_n(&(pla->fActThres), 1);
+}
+
+void eo_swap_unit_attrib(NN_UNIT_ATTRIB* pua) 
+{
+	eo_swap_short_n(&(pua->iLayer), 1);
+	eo_swap_short_n(&(pua->iUnit), 1);
+	eo_swap_short_n(&(pua->nNumConns), 1);
+	eo_swap_short_n(&(pua->bHasMatrix), 1);
+	eo_swap_double_n(&(pua->fInpBias), 1);
+	eo_swap_double_n(&(pua->fInpScale), 1);
+	eo_swap_double_n(&(pua->fOutBias), 1);
+	eo_swap_double_n(&(pua->fOutScale), 1);
+}
+
+void eo_swap_conn_attrib(NN_CONN_ATTRIB* pca) 
+{
+	eo_swap_short_n(&(pca->iLayer), 1);
+	eo_swap_short_n(&(pca->iUnit), 1);
+	eo_swap_double_n(&(pca->fWeight), 1);
+}
+
+
+/*////////////////////////////////////////////////////////////////////////////*/
+
