@@ -1,4 +1,9 @@
-Since 1.3: 
+Since 1.3.1:
+
+We had to remove the GCC -mlong32 flag because it is a MIPS-sepcific GCC option only. Therefore
+the type "long" has been replaced by "int" which seems to be 32 bits on all x64 systems now. (nf, 2015-09-16)
+
+Since 1.3:
 
 Now taking care that binary NNs files are always written in big endian order 
 and read back correctly, regardless of the executing OS. (nf, 2012-05-04)
