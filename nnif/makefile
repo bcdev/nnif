@@ -25,7 +25,8 @@ PRJ_OBJS = \
   $(OUTDIR)/NnProc.o \
   $(OUTDIR)/NnMemIO.o \
   $(OUTDIR)/NnBinIO.o \
-  $(OUTDIR)/NnAscIO.o
+  $(OUTDIR)/NnAscIO.o \
+  $(OUTDIR)/endian_order.o
 
 
 info :
@@ -62,7 +63,6 @@ PRJ_SRC1 = $(SRCDIR)/NnBase.c
 $(OUTDIR)/NnBase.o : $(PRJ_SRC1) $(PRJ_HDR1)
 	$(COMPILE) -o $@ $(PRJ_SRC1)
 
-
 PRJ_HDR2 = $(SRCDIR)/NnBase.h $(SRCDIR)/NnCheck.h
 PRJ_SRC2 = $(SRCDIR)/NnCheck.c
 $(OUTDIR)/NnCheck.o : $(PRJ_SRC2) $(PRJ_HDR2)
@@ -72,7 +72,6 @@ PRJ_HDR3 = $(SRCDIR)/NnBase.h $(SRCDIR)/NnProc.h
 PRJ_SRC3 = $(SRCDIR)/NnProc.c
 $(OUTDIR)/NnProc.o : $(PRJ_SRC3) $(PRJ_HDR3)
 	$(COMPILE) -o $@ $(PRJ_SRC3)
-
 
 PRJ_HDR4 = $(SRCDIR)/NnBase.h $(SRCDIR)/NnCheck.h $(SRCDIR)/NnMemIO.h
 PRJ_SRC4 = $(SRCDIR)/NnMemIO.c
@@ -84,9 +83,13 @@ PRJ_SRC5 = $(SRCDIR)/NnBinIO.c
 $(OUTDIR)/NnBinIO.o : $(PRJ_SRC5) $(PRJ_HDR5)
 	$(COMPILE) -o $@ $(PRJ_SRC5)
 
-
 PRJ_HDR4 = $(SRCDIR)/NnBase.h $(SRCDIR)/NnCheck.h $(SRCDIR)/NnAscIO.h
 PRJ_SRC6 = $(SRCDIR)/NnAscIO.c
 $(OUTDIR)/NnAscIO.o : $(PRJ_SRC6) $(PRJ_HDR6)
 	$(COMPILE) -o $@ $(PRJ_SRC6)
+
+PRJ_HDR5 = $(SRCDIR)/utils/endian_order.h
+PRJ_SRC7 = $(SRCDIR)/utils/endian_order.c
+$(OUTDIR)/endian_order.o : $(PRJ_SRC7) $(PRJ_HDR5)
+	$(COMPILE) -o $@ $(PRJ_SRC7)
 
