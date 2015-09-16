@@ -25,14 +25,14 @@ static FILE* g_stream = NULL;
 /*////////////////////////////////////////////////////////////////////////////*/
 /* Module local prototypes:                                                   */
 /*                                                                            */
-NN_STATUS Nn_ReadBinHeader  (long* pnSectionID, long* pnSectionSize);
+NN_STATUS Nn_ReadBinHeader  (int* pnSectionID, int* pnSectionSize);
 NN_STATUS Nn_ReadBinNet     (NN_PNET   pNet);
 NN_STATUS Nn_ReadBinLayer   (NN_PLAYER pLayer);
 NN_STATUS Nn_ReadBinUnit    (NN_PUNIT  pUnit);
 NN_STATUS Nn_ReadBinConns   (NN_PUNIT  pUnit);
 NN_STATUS Nn_ReadBinMatrix  (NN_PUNIT  pUnit);
 
-NN_STATUS Nn_WriteBinHeader (long nSectionID, long nSectionSize);
+NN_STATUS Nn_WriteBinHeader (int nSectionID, int nSectionSize);
 NN_STATUS Nn_WriteBinNet    (const NN_PNET   pNet);
 NN_STATUS Nn_WriteBinLayer  (const NN_PLAYER pLayer);
 NN_STATUS Nn_WriteBinUnit   (const NN_PUNIT  pUnit);
@@ -111,8 +111,8 @@ NN_STATUS Nn_CreateNetFromBinFile
 
 NN_STATUS Nn_ReadBinHeader 
 (
-	long* pnSectionID,   /* Section ID (4 byte code, 4th is zero) */
-	long* pnSectionSize  /* Size of the following section (4 byte integer) */
+	int* pnSectionID,   /* Section ID (4 byte code, 4th is zero) */
+	int* pnSectionSize  /* Size of the following section (4 byte integer) */
 )
 {
 	assert(pnSectionID != NULL);
@@ -120,17 +120,17 @@ NN_STATUS Nn_ReadBinHeader
 	assert(g_stream != NULL);
 
 	/* Read the section identifier (4 bytes) */
-	fread(pnSectionID,   sizeof (long), 1, g_stream);
+	fread(pnSectionID,   sizeof (int), 1, g_stream);
 	if (eo_endian_order() != BIG_ENDIAN) 
-		eo_swap_long_n(pnSectionID, 1);
+		eo_swap_int_n(pnSectionID, 1);
 
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
 	
 	/* Read the section size (4 bytes) */
-	fread(pnSectionSize, sizeof (long), 1, g_stream);
+	fread(pnSectionSize, sizeof (int), 1, g_stream);
 	if (eo_endian_order() != BIG_ENDIAN) 
-		eo_swap_long_n(pnSectionSize, 1);
+		eo_swap_int_n(pnSectionSize, 1);
 
 	if (ferror(g_stream))
 		return Nn_SetFileReadError();
@@ -150,7 +150,7 @@ NN_STATUS Nn_ReadBinNet (NN_PNET pNet)
 	short      iL, iU;
 	NN_PLAYER  pLayer;
 	NN_PUNIT   pUnit;
-	long       nSectionID, nSectionSize;
+	int       nSectionID, nSectionSize;
 
 	assert(pNet != NULL);
 	assert(g_stream != NULL);
@@ -161,7 +161,7 @@ NN_STATUS Nn_ReadBinNet (NN_PNET pNet)
 		return nns;
 
 	/* If the identifier does not match: error */
-	if (nSectionID != *(long*)NN_NET_SECTION_ID)
+	if (nSectionID != *(int*)NN_NET_SECTION_ID)
 		return Nn_SetInvalidSectionIDError();
 		
 	/* If the size is not correct: error */
@@ -221,7 +221,7 @@ NN_STATUS Nn_ReadBinNet (NN_PNET pNet)
 NN_STATUS Nn_ReadBinLayer (NN_PLAYER pLayer)
 {
 	NN_STATUS nns;
-	long nSectionID, nSectionSize;
+	int nSectionID, nSectionSize;
 	
 	assert(pLayer != NULL);
 	assert(g_stream != NULL);
@@ -232,7 +232,7 @@ NN_STATUS Nn_ReadBinLayer (NN_PLAYER pLayer)
 		return nns;
 
 	/* If the identifier does not match: error */
-	if (nSectionID != *(long*)NN_LAYER_SECTION_ID)
+	if (nSectionID != *(int*)NN_LAYER_SECTION_ID)
 		return Nn_SetInvalidSectionIDError();
 		
 	/* If the size is not correct: error */
@@ -265,7 +265,7 @@ NN_STATUS Nn_ReadBinLayer (NN_PLAYER pLayer)
 NN_STATUS Nn_ReadBinUnit (NN_PUNIT  pUnit)
 {
 	NN_STATUS nns;
-	long      nSectionID, nSectionSize;
+	int      nSectionID, nSectionSize;
 	
 	assert(pUnit != NULL);
 	assert(g_stream != NULL);
@@ -276,7 +276,7 @@ NN_STATUS Nn_ReadBinUnit (NN_PUNIT  pUnit)
 		return nns;
 
 	/* If the identifier does not match: error */
-	if (nSectionID != *(long*)NN_UNIT_SECTION_ID)
+	if (nSectionID != *(int*)NN_UNIT_SECTION_ID)
 		return Nn_SetInvalidSectionIDError();
 		
 	/* If the size is not correct: error */
@@ -322,7 +322,7 @@ NN_STATUS Nn_ReadBinConns (NN_PUNIT  pUnit)
 	NN_STATUS nns;
 	NN_PCONN  pConn;
 	short     iC;
-	long      nSectionID, nSectionSize;
+	int      nSectionID, nSectionSize;
 	
 	assert(pUnit != NULL);
 	assert(g_stream != NULL);
@@ -333,7 +333,7 @@ NN_STATUS Nn_ReadBinConns (NN_PUNIT  pUnit)
 		return nns;
 
 	/* If the identifier does not match: error */
-	if (nSectionID != *(long*)NN_CONN_SECTION_ID)
+	if (nSectionID != *(int*)NN_CONN_SECTION_ID)
 		return Nn_SetInvalidSectionIDError();
 		
 	/* If the size is not correct: error */
@@ -377,7 +377,7 @@ NN_STATUS Nn_ReadBinMatrix (NN_PUNIT pUnit)
 	NN_STATUS nns;
 	NN_FLOAT* pfRow;
 	short     iC;
-	long      nSectionID, nSectionSize;
+	int      nSectionID, nSectionSize;
 	
 	assert(pUnit != NULL);
 	assert(g_stream != NULL);
@@ -388,7 +388,7 @@ NN_STATUS Nn_ReadBinMatrix (NN_PUNIT pUnit)
 		return nns;
 
 	/* If the identifier does not match: error */
-	if (nSectionID != *(long*)NN_MATRIX_SECTION_ID)
+	if (nSectionID != *(int*)NN_MATRIX_SECTION_ID)
 		return Nn_SetInvalidSectionIDError();
 		
 	/* If the size is not correct: error */
@@ -459,21 +459,21 @@ NN_STATUS Nn_WriteNetToBinFile (const char* pchFilePath, const NN_PNET pNet)
 /* Returns:  NN_OK (or zero) for success, NN_FILE_WRITE_ERROR otherwise       */
 /*////////////////////////////////////////////////////////////////////////////*/
 
-NN_STATUS Nn_WriteBinHeader (long nSectionID, long nSectionSize)
+NN_STATUS Nn_WriteBinHeader (int nSectionID, int nSectionSize)
 {
-        assert(g_stream != NULL);
+    assert(g_stream != NULL);
 
 	/* Write the section identifier (4 bytes) */
-        if (eo_endian_order() != BIG_ENDIAN)
-		eo_swap_long_n(&nSectionID, 1); 
-	fwrite(&nSectionID, sizeof (long), 1, g_stream);
+    if (eo_endian_order() != BIG_ENDIAN)
+		eo_swap_int_n(&nSectionID, 1);
+	fwrite(&nSectionID, sizeof (int), 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 
 	/* Write the section size (4 bytes) */
-        if (eo_endian_order() != BIG_ENDIAN)
-		eo_swap_long_n(&nSectionSize, 1); 
-	fwrite(&nSectionSize, sizeof (long), 1, g_stream);
+    if (eo_endian_order() != BIG_ENDIAN)
+		eo_swap_int_n(&nSectionSize, 1);
+	fwrite(&nSectionSize, sizeof (int), 1, g_stream);
 	if (ferror(g_stream))
 		return Nn_SetFileWriteError();
 	
@@ -498,7 +498,7 @@ NN_STATUS Nn_WriteBinNet (const NN_PNET pNet)
 	assert(g_stream != NULL);
 
 	/* Write the net header */
-	nns = Nn_WriteBinHeader(*(long*)NN_NET_SECTION_ID, NN_NET_SECTION_SIZE);
+	nns = Nn_WriteBinHeader(*(int*)NN_NET_SECTION_ID, NN_NET_SECTION_SIZE);
 	if (nns != NN_OK)
 		return nns;
 	
@@ -558,7 +558,7 @@ NN_STATUS Nn_WriteBinLayer (const NN_PLAYER pLayer)
 	assert(g_stream != NULL);
 
 	/* Write the layer section header to the NNFF file */
-	nns = Nn_WriteBinHeader(*(long*)NN_LAYER_SECTION_ID, NN_LAYER_SECTION_SIZE);
+	nns = Nn_WriteBinHeader(*(int*)NN_LAYER_SECTION_ID, NN_LAYER_SECTION_SIZE);
 	if (nns != NN_OK)
 		return nns;
 	
@@ -589,7 +589,7 @@ NN_STATUS Nn_WriteBinUnit  (const NN_PUNIT pUnit)
 	assert(g_stream != NULL);
 
 	/* Write the unit section header to the NNFF file */
-	nns = Nn_WriteBinHeader(*(long*)NN_UNIT_SECTION_ID, NN_UNIT_SECTION_SIZE);
+	nns = Nn_WriteBinHeader(*(int*)NN_UNIT_SECTION_ID, NN_UNIT_SECTION_SIZE);
 	if (nns != NN_OK)
 		return nns;
 
@@ -639,7 +639,7 @@ NN_STATUS Nn_WriteBinConns (const NN_PUNIT pUnit)
 	assert(g_stream != NULL);
 
 	/* Write the connection section header to the NNFF file */
-	nns = Nn_WriteBinHeader(*(long*)NN_CONN_SECTION_ID, NN_CONN_ENTRY_SIZE);
+	nns = Nn_WriteBinHeader(*(int*)NN_CONN_SECTION_ID, NN_CONN_ENTRY_SIZE);
 	if (nns != NN_OK)
 		return nns;
 
@@ -685,7 +685,7 @@ NN_STATUS Nn_WriteBinMatrix  (const NN_PUNIT pUnit)
 	assert(g_stream != NULL);
 
 	/* Write the unit section header to the NNFF file */
-	nns = Nn_WriteBinHeader(*(long*)NN_MATRIX_SECTION_ID, NN_MATRIX_ENTRY_SIZE);
+	nns = Nn_WriteBinHeader(*(int*)NN_MATRIX_SECTION_ID, NN_MATRIX_ENTRY_SIZE);
 	if (nns != NN_OK)
 		return nns;
 

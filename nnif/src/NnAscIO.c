@@ -707,7 +707,7 @@ static int       g_nTokenLen;
 static NN_TOKEN  g_nTokenId;
 static BOOL      g_bTokenConsumed;
 static double    g_dTokenVal;
-static long      g_lTokenVal;
+static int       g_iTokenVal;
 static int       g_nLineNo;
 static int       g_nNumErrors;
 
@@ -717,8 +717,8 @@ static int       g_nNumErrors;
 #define Nn_ConsumeChar()  (++g_pchCur)
 #define Nn_PeekBinary()   (*g_pchCur >= 0 && *g_pchCur < 32 || *g_pchCur == 127)
 
-long   Nn_GetTokenValInt ()   { return g_lTokenVal; }
-double Nn_GetTokenValFloat () { return g_dTokenVal; }
+int     Nn_GetTokenValInt ()   { return g_iTokenVal; }
+double  Nn_GetTokenValFloat () { return g_dTokenVal; }
 
 /*////////////////////////////////////////////////////////////////////////////*/
 NN_STATUS Nn_OpenAscFileScanner (PCSTR pchFilePath)
@@ -737,7 +737,7 @@ NN_STATUS Nn_OpenAscFileScanner (PCSTR pchFilePath)
 	g_nTokenId       = NN_TOK_EOL;
 	g_bTokenConsumed = TRUE;
 	g_dTokenVal      = 0.0;
-	g_lTokenVal      = 0;
+	g_iTokenVal      = 0;
 	g_nLineNo        = 0;
 	g_nNumErrors     = 0;
 
@@ -878,7 +878,7 @@ NN_TOKEN Nn_ScanToken()
 		PSTR pchD, pchL;
 
 		g_dTokenVal = strtod(g_pchCur, &pchD);
-		g_lTokenVal = strtol(g_pchCur, &pchL, 0);
+		g_iTokenVal = strtol(g_pchCur, &pchL, 0);
 
 		if (pchD > g_pchCur && pchD > pchL)
 		{
@@ -910,19 +910,19 @@ NN_TOKEN Nn_ScanToken()
 		for (;;)
 		{
 			Nn_ConsumeChar();
-			g_lTokenVal = Nn_PeekChar();
-			if (g_lTokenVal == '\"')
+			g_iTokenVal = Nn_PeekChar();
+			if (g_iTokenVal == '\"')
 			{
 				Nn_ConsumeChar();
 				break;
 			}
-			else if (g_lTokenVal == '\0')
+			else if (g_iTokenVal == '\0')
 			{
 				Nn_AscReadError("missing string literal delimitter");
 				break;
 			}
 
-			g_sTokenVal += (TCHAR) g_lTokenVal;
+			g_sTokenVal += (TCHAR) g_iTokenVal;
 		} 
 	}
 #endif

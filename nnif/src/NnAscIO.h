@@ -174,7 +174,7 @@ PCSTR Nn_GetTokenName (NN_TOKEN nTokenId);
 
 NN_STATUS Nn_AscReadError (PCSTR pszFormat, ...);
 int Nn_GetNumErrors();
-long Nn_GetTokenValInt();
+int Nn_GetTokenValInt();
 double Nn_GetTokenValFloat();
 
 NN_STATUS Nn_WriteNetToAscFile (PCSTR pchFilePath, const NN_PNET pNet);
