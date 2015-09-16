@@ -4,7 +4,7 @@ OUTDIR = ./build/$(CFGDIR)
 
 TARGET = ./lib/libnnif.a
 
-COMPILE = gcc -mlong32 -I$(SRCDIR) $(CFGOPT) -c
+COMPILE = gcc -I$(SRCDIR) $(CFGOPT) -c
 LINK    = ar
 
 
