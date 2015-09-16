@@ -65,7 +65,14 @@ void eo_swap_short_n(short* pv, int n)
         *pv = eo_swap_short(*pv);
 }
 
-void eo_swap_long_n(long* pv, int n) 
+void eo_swap_int_n(int* pv, int n)
+{
+    int i;
+    for (i = 0; i < n; i++, pv++)
+        *pv = eo_swap_int(*pv);
+}
+
+void eo_swap_long_n(long* pv, int n)
 {
     int i;
     for (i = 0; i < n; i++, pv++) 
