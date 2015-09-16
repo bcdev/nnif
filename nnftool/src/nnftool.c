@@ -364,12 +364,12 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	if (g_nPrgMode == NNFTOOL_NNF2NNF   && nNumArgs != 1 ||
-		g_nPrgMode == NNFTOOL_FFBP2NNF  && nNumArgs < 1  ||
-		g_nPrgMode == NNFTOOL_FFBPX2NNF && nNumArgs < 3  ||
-		g_nPrgMode == NNFTOOL_TEST      && nNumArgs != 2 ||
-		g_nPrgMode == NNFTOOL_CREATE    && (nNumArgs < 2 || nNumArgs >= NUM_LAYERS_MAX) ||
-		g_nPrgMode == NNFTOOL_HELP      && nNumArgs != 0) 
+	if ((g_nPrgMode == NNFTOOL_NNF2NNF   && nNumArgs != 1) ||
+		(g_nPrgMode == NNFTOOL_FFBP2NNF  && nNumArgs < 1)  ||
+		(g_nPrgMode == NNFTOOL_FFBPX2NNF && nNumArgs < 3)  ||
+		(g_nPrgMode == NNFTOOL_TEST      && nNumArgs != 2) ||
+		(g_nPrgMode == NNFTOOL_CREATE    && (nNumArgs < 2) || nNumArgs >= NUM_LAYERS_MAX) ||
+		(g_nPrgMode == NNFTOOL_HELP      && nNumArgs != 0))
 	{
 		fprintf(stderr, "Invalid number of arguments\n");
 		return -1;
@@ -485,7 +485,7 @@ NN_PNET readNnfNet(const char* pchNnfFile, BOOL bForceMemoryCreat)
 			fread(pMem, 1, nFileSize, istream);
 			fclose(istream);
 			nns = Nn_CreateNetFromMemFile(pMem, nFileSize, &nBytesRead, &pNet, -1, -1);
-			printf("Memory creation status: %d bytes file size, %d bytes converted\n", nFileSize, nBytesRead);
+			printf("Memory creation status: %i bytes file size, %i bytes converted\n", nFileSize, nBytesRead);
 			free(pMem);
 		}
 		else 
